@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-bg: #091227;
+  --color-brand-bg-sub: #111b33;
+  --color-brand-bg-dark: #060d1b;
+  --color-brand-main: #e7eefc;
+  --color-brand-extra: #52d6ff;
+  --color-brand-sub: #95a7ce;
+  --color-brand-error: #ff6c8d;
+  --color-brand-caret: #52d6ff;
+  --font-sans: "Inter", "DM Sans", system-ui, sans-serif;
+  --font-mono: "DM Mono", "Roboto Mono", monospace;
+  
+  --animate-blink: blink 1s infinite;
+  --animate-fade-in: fade-in 0.5s ease-out forwards;
+  --animate-float-up: float-up 1.8s ease-out forwards;
+  --animate-glow-pulse: glow-pulse 2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes float-up {
+  0% { transform: translateY(0) scale(0.95); opacity: 0; }
+  15% { opacity: 0.5; }
+  100% { transform: translateY(-140px) scale(1.15); opacity: 0; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 10px 40px rgba(17, 224, 255, 0.12); }
+  50% { box-shadow: 0 12px 48px rgba(143, 102, 255, 0.25); }
+}
+
+/* Base styles to preserve the current look while we migrate components */
+@layer base {
+  body {
+    @apply bg-brand-bg text-brand-main font-sans min-h-screen antialiased scroll-smooth;
+    background-image:
+      radial-gradient(circle at 10% 20%, rgba(82, 214, 255, 0.22), transparent 40%),
+      radial-gradient(circle at 85% 10%, rgba(99, 117, 255, 0.20), transparent 38%),
+      radial-gradient(circle at 75% 85%, rgba(255, 108, 141, 0.16), transparent 40%),
+      linear-gradient(160deg, #060d1b 0%, #091227 45%, #0b1730 100%);
+  }
+}
+
+/* Custom utility for the floating note labels */
+@utility note-float {
+  @apply fixed pointer-events-none font-mono text-sm font-semibold text-brand-extra z-[9999];
+  text-shadow: 0 0 15px rgba(226, 183, 20, 0.6);
+}
+
+@utility glass-panel {
+  @apply bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl;
+}
+
+@utility glass-panel-subtle {
+  @apply bg-white/5 backdrop-blur-lg border border-white/15;
+}
+
+@utility glass-chip {
+  @apply bg-white/10 border border-white/20 backdrop-blur-md rounded-xl;
+}
