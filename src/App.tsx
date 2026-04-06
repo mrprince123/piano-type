@@ -38,8 +38,10 @@ export default function App() {
     return saved ? JSON.parse(saved) : {}
   })
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set())
+  const [errorKeys, setErrorKeys] = useState<Set<string>>(new Set())
   const [isManagerOpen, setIsManagerOpen] = useState(false)
   const releaseTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+  const errorTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
   const finishedRef = useRef(false)
   const isManagerOpenRef = useRef(false)
   const modeRef = useRef(mode)
@@ -90,6 +92,12 @@ export default function App() {
       clearTimeout(timer)
       delete releaseTimersRef.current[key]
     }
+    const clearErrorTimer = (key: string) => {
+      const timer = errorTimersRef.current[key]
+      if (!timer) return
+      clearTimeout(timer)
+      delete errorTimersRef.current[key]
+    }
 
     const handleDown = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase()
@@ -121,10 +129,27 @@ export default function App() {
       if (key.length !== 1) return
       if (key === ' ') e.preventDefault()
 
-      handleCharRef.current(key, (correctIdx) => {
+      const ok = handleCharRef.current(key, (correctIdx) => {
         const note = currentSongRef.current?.seq?.[correctIdx]?.n
         if (note) playNoteRef.current(note)
       })
+
+      if (!ok) {
+        clearErrorTimer(key)
+        setErrorKeys(prev => {
+          const next = new Set(prev)
+          next.add(key)
+          return next
+        })
+        errorTimersRef.current[key] = setTimeout(() => {
+          setErrorKeys(prev => {
+            const next = new Set(prev)
+            next.delete(key)
+            return next
+          })
+          delete errorTimersRef.current[key]
+        }, 180)
+      }
     }
     const handleUp = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase()
@@ -146,6 +171,8 @@ export default function App() {
       window.removeEventListener('keyup', handleUp)
       Object.values(releaseTimersRef.current).forEach(clearTimeout)
       releaseTimersRef.current = {}
+      Object.values(errorTimersRef.current).forEach(clearTimeout)
+      errorTimersRef.current = {}
     }
   }, [])
 
@@ -154,6 +181,26 @@ export default function App() {
     currentSong, 
     testSettings.type === 'time' ? testSettings.value : null
   )
+
+  const wordProgress = useMemo(() => {
+    if (mode !== 'typing' || !currentSong?.seq?.length) return null
+    const chars = currentSong.seq.map(step => step.k)
+    const text = chars.join('').trim()
+    if (!text) return null
+
+    const totalWords = text.split(/\s+/).filter(Boolean).length
+    if (totalWords === 0) return null
+
+    const completedWords = currentSong.seq
+      .slice(0, idx)
+      .reduce((count, step) => count + (step.k === ' ' ? 1 : 0), 0)
+
+    const currentWord = finished
+      ? totalWords
+      : Math.min(totalWords, completedWords + 1)
+
+    return `${currentWord}/${totalWords}`
+  }, [mode, currentSong, idx, finished])
 
   const currentSongRef = useRef(currentSong)
   const handleCharRef = useRef(handleChar)
@@ -214,6 +261,7 @@ export default function App() {
                 elapsed={elapsed} 
                 isTimeMode={mode === 'typing' && testSettings.type === 'time'}
                 timeLimit={testSettings.value}
+                wordProgress={wordProgress}
             />
             
             {mode === 'typing' && (
@@ -252,6 +300,7 @@ export default function App() {
         <div className="mt-auto py-4">
           <Keyboard 
             pressedKeys={pressedKeys} 
+            errorKeys={errorKeys}
             targetKey={currentSong?.seq?.[idx]?.k?.toLowerCase()}
           />
         </div>

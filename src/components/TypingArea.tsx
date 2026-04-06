@@ -23,33 +23,68 @@ export default function TypingArea({ song, currentIdx, mode, onReset }: TypingAr
   }, [currentIdx])
 
   const sequence = song?.seq || []
+  const maxLineChars = mode === 'typing' ? 48 : 36
+
+  // Build readable lines and prefer wrapping at spaces when possible.
+  const lines: Array<{ start: number; end: number }> = []
+  let start = 0
+  while (start < sequence.length) {
+    let i = start
+    let count = 0
+    let lastSpace = -1
+
+    while (i < sequence.length && count < maxLineChars) {
+      if (sequence[i].k === ' ') lastSpace = i
+      i += 1
+      count += 1
+    }
+
+    if (i < sequence.length && lastSpace > start) i = lastSpace + 1
+    lines.push({ start, end: i - 1 })
+    start = i
+  }
+
+  const safeIdx = sequence.length === 0 ? 0 : Math.min(currentIdx, sequence.length - 1)
+  const currentLineIndex = Math.max(
+    0,
+    lines.findIndex(line => safeIdx >= line.start && safeIdx <= line.end)
+  )
+  const visibleLines = lines.slice(currentLineIndex, currentLineIndex + 3)
 
   return (
     <div className="w-full relative py-2 md:py-4 min-h-[140px] flex flex-col items-center">
       <div 
-        className="font-mono text-xl md:text-3xl leading-[1.8] tracking-[1px] select-none break-words max-w-4xl text-center transition-all duration-300 px-2" 
+        className="font-mono text-xl md:text-3xl leading-[1.45] tracking-[1px] select-none break-words max-w-8xl text-center transition-all duration-300 px-2" 
         ref={displayRef}
       >
-        {sequence.map((step, i) => {
-          const isTyped = i < currentIdx
-          const isCurrent = i === currentIdx
-          
-          return (
-            <span 
-                key={i} 
-                id={`ci${i}`}
-                className={`relative inline-block transition-all duration-150 ${
-                    isTyped ? 'text-brand-main opacity-100' : isCurrent ? 'text-brand-extra scale-110' : 'text-brand-sub opacity-30'
-                }`}
-                style={{ whiteSpace: step.k === ' ' ? 'pre' : 'normal' }}
-            >
-              {isCurrent && (
-                <span className="absolute -mt-1 w-[2px] h-[1.2em] bg-brand-extra animate-blink" />
-              )}
-              {step.k}
-            </span>
-          )
-        })}
+        {visibleLines.map((line, lineIndex) => (
+          <div
+            key={`${line.start}-${line.end}`}
+            className={`${lineIndex > 0 ? 'mt-1' : ''} whitespace-pre overflow-hidden`}
+          >
+            {sequence.slice(line.start, line.end + 1).map((step, offset) => {
+              const i = line.start + offset
+              const isTyped = i < currentIdx
+              const isCurrent = i === currentIdx
+
+              return (
+                <span 
+                    key={i} 
+                    id={`ci${i}`}
+                    className={`relative inline-block transition-all duration-150 ${
+                        isTyped ? 'text-brand-main opacity-100' : isCurrent ? 'text-brand-extra scale-110' : 'text-brand-sub opacity-30'
+                    }`}
+                    style={{ whiteSpace: step.k === ' ' ? 'pre' : 'normal' }}
+                >
+                  {isCurrent && (
+                    <span className="absolute -mt-1 w-[2px] h-[1.2em] bg-brand-extra animate-blink" />
+                  )}
+                  {step.k}
+                </span>
+              )
+            })}
+          </div>
+        ))}
       </div>
 
       <div className="mt-8 md:mt-12 flex gap-4 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">

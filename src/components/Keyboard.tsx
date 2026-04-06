@@ -6,12 +6,18 @@ const ROWS = [
   ['z', 'x', 'c', 'v', 'b', 'n', 'm']
 ]
 
-export default function Keyboard({ pressedKeys, targetKey }) {
+interface KeyboardProps {
+  pressedKeys: Set<string>
+  errorKeys: Set<string>
+  targetKey?: string
+}
+
+export default function Keyboard({ pressedKeys, errorKeys, targetKey }: KeyboardProps) {
   // Normalize targetKey for comparison (sometimes it might be uppercase or space)
   const normalizedTarget = targetKey?.toLowerCase()
 
   return (
-    <div className="flex flex-col gap-2 items-center select-none opacity-75 hover:opacity-100 transition-opacity duration-500 scale-[0.82] md:scale-100 glass-panel-subtle rounded-2xl p-3 md:p-4">
+    <div className="flex flex-col gap-2 items-center select-none opacity-75 hover:opacity-100 transition-opacity duration-500 scale-[0.82] md:scale-100 p-3 md:p-4">
       {ROWS.map((row, rowIndex) => (
         <div key={rowIndex} className="flex gap-1.5">
           {/* Row Indentation for QWERTY feel */}
@@ -20,6 +26,7 @@ export default function Keyboard({ pressedKeys, targetKey }) {
           
           {row.map(key => {
             const isPressed = pressedKeys.has(key)
+            const isError = errorKeys.has(key)
             const isTarget = normalizedTarget === key
             
             return (
@@ -28,7 +35,9 @@ export default function Keyboard({ pressedKeys, targetKey }) {
                 className={`
                   w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-lg text-sm font-mono font-medium transition-all duration-75
                   border-b-4 
-                  ${isPressed 
+                  ${isError
+                    ? 'bg-brand-error/85 text-white border-brand-error translate-y-[1px] shadow-[0_0_20px_rgba(255,108,141,0.4)]'
+                    : isPressed 
                     ? 'bg-brand-main text-brand-bg-dark border-brand-main translate-y-[2px] border-b-0 shadow-inner' 
                     : isTarget 
                       ? 'bg-brand-extra/20 text-brand-main border-brand-extra/50 animate-pulse' 
@@ -47,7 +56,9 @@ export default function Keyboard({ pressedKeys, targetKey }) {
         <div 
           className={`
             h-10 md:h-12 w-48 md:w-64 rounded-lg transition-all duration-75 border-b-4 flex items-center justify-center
-            ${pressedKeys.has(' ') 
+            ${errorKeys.has(' ')
+              ? 'bg-brand-error/85 border-brand-error translate-y-[1px] shadow-[0_0_20px_rgba(255,108,141,0.4)]'
+              : pressedKeys.has(' ') 
               ? 'bg-brand-main border-brand-main translate-y-[2px] border-b-0 shadow-inner' 
               : normalizedTarget === ' ' 
                 ? 'bg-brand-extra/20 border-brand-extra/40 animate-pulse' 
