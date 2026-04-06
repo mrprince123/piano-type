@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, type FormEvent } from 'react'
 
 interface Song {
   seq: { k: string; n: string }[]
@@ -8,11 +8,13 @@ interface TypingAreaProps {
   song: Song | null
   currentIdx: number
   mode: string
+  onVirtualChar?: (char: string) => void
   onReset: () => void
 }
 
-export default function TypingArea({ song, currentIdx, mode, onReset }: TypingAreaProps) {
-  const displayRef = useRef(null)
+export default function TypingArea({ song, currentIdx, mode, onVirtualChar, onReset }: TypingAreaProps) {
+  const displayRef = useRef<HTMLDivElement | null>(null)
+  const mobileInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     if (!displayRef.current) return
@@ -51,8 +53,52 @@ export default function TypingArea({ song, currentIdx, mode, onReset }: TypingAr
   )
   const visibleLines = lines.slice(currentLineIndex, currentLineIndex + 3)
 
+  const focusMobileInput = () => {
+    if (mode !== 'typing') return
+    mobileInputRef.current?.focus()
+  }
+
+  const handleMobileBeforeInput = (e: FormEvent<HTMLInputElement>) => {
+    const native = e.nativeEvent as InputEvent
+    const data = native.data
+    if (!data) return
+
+    for (const char of data) {
+      onVirtualChar?.(char === '\n' ? ' ' : char)
+    }
+  }
+
+  const handleMobileInput = (e: FormEvent<HTMLInputElement>) => {
+    // Keep this input empty so each event only carries fresh characters.
+    e.currentTarget.value = ''
+  }
+
   return (
-    <div className="w-full relative py-2 md:py-4 min-h-[140px] flex flex-col items-center">
+    <div
+      className="w-full relative py-2 md:py-4 min-h-[140px] flex flex-col items-center"
+      onClick={focusMobileInput}
+    >
+      {mode === 'typing' && (
+        <>
+          <input
+            ref={mobileInputRef}
+            className="absolute w-px h-px opacity-0 pointer-events-none"
+            type="text"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            inputMode="text"
+            onBeforeInput={handleMobileBeforeInput}
+            onInput={handleMobileInput}
+            aria-label="Typing input"
+          />
+          <div className="md:hidden mb-2 text-[11px] uppercase tracking-[2px] text-brand-sub/80">
+            tap text area to open keyboard
+          </div>
+        </>
+      )}
+
       <div 
         className="font-mono text-xl md:text-3xl leading-[1.45] tracking-[1px] select-none break-words max-w-8xl text-center transition-all duration-300 px-2" 
         ref={displayRef}

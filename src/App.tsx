@@ -213,6 +213,52 @@ export default function App() {
     audio.currentTime = 0
     audio.play().catch(() => {})
   }, [mode])
+
+  const handleVirtualChar = useCallback((rawChar: string) => {
+    const key = (rawChar === '\n' ? ' ' : rawChar).toLowerCase()
+    if (key.length !== 1) return
+
+    const releaseTimer = releaseTimersRef.current[key]
+    if (releaseTimer) clearTimeout(releaseTimer)
+    setPressedKeys(prev => {
+      const next = new Set(prev)
+      next.add(key)
+      return next
+    })
+    releaseTimersRef.current[key] = setTimeout(() => {
+      setPressedKeys(prev => {
+        const next = new Set(prev)
+        next.delete(key)
+        return next
+      })
+      delete releaseTimersRef.current[key]
+    }, 100)
+
+    if (finishedRef.current || isManagerOpenRef.current) return
+
+    const ok = handleCharRef.current(key, (correctIdx) => {
+      const note = currentSongRef.current?.seq?.[correctIdx]?.n
+      if (note) playNoteRef.current(note)
+    })
+
+    if (!ok) {
+      const errorTimer = errorTimersRef.current[key]
+      if (errorTimer) clearTimeout(errorTimer)
+      setErrorKeys(prev => {
+        const next = new Set(prev)
+        next.add(key)
+        return next
+      })
+      errorTimersRef.current[key] = setTimeout(() => {
+        setErrorKeys(prev => {
+          const next = new Set(prev)
+          next.delete(key)
+          return next
+        })
+        delete errorTimersRef.current[key]
+      }, 180)
+    }
+  }, [])
   
   useEffect(() => {
     finishedRef.current = finished
@@ -274,6 +320,7 @@ export default function App() {
             song={currentSong} 
             currentIdx={idx} 
             mode={mode}
+            onVirtualChar={handleVirtualChar}
             onReset={() => {
               reset()
               if (mode === 'typing') setTypingData(generateTypingData(testSettings.value))
