@@ -1,4 +1,4 @@
-import { useRef, useEffect, type FormEvent } from 'react'
+import { useRef, useEffect, useState, type FormEvent } from 'react'
 
 interface Song {
   seq: { k: string; n: string }[]
@@ -15,6 +15,7 @@ interface TypingAreaProps {
 export default function TypingArea({ song, currentIdx, mode, onVirtualChar, onReset }: TypingAreaProps) {
   const displayRef = useRef<HTMLDivElement | null>(null)
   const mobileInputRef = useRef<HTMLInputElement | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
     if (!displayRef.current) return
@@ -24,8 +25,17 @@ export default function TypingArea({ song, currentIdx, mode, onVirtualChar, onRe
     }
   }, [currentIdx])
 
+  useEffect(() => {
+    const updateViewport = () => setIsMobile(window.innerWidth < 768)
+    updateViewport()
+    window.addEventListener('resize', updateViewport)
+    return () => window.removeEventListener('resize', updateViewport)
+  }, [])
+
   const sequence = song?.seq || []
-  const maxLineChars = mode === 'typing' ? 48 : 36
+  const maxLineChars = mode === 'typing'
+    ? (isMobile ? 24 : 48)
+    : (isMobile ? 20 : 36)
 
   // Build readable lines and prefer wrapping at spaces when possible.
   const lines: Array<{ start: number; end: number }> = []
@@ -54,7 +64,6 @@ export default function TypingArea({ song, currentIdx, mode, onVirtualChar, onRe
   const visibleLines = lines.slice(currentLineIndex, currentLineIndex + 3)
 
   const focusMobileInput = () => {
-    if (mode !== 'typing') return
     mobileInputRef.current?.focus()
   }
 
@@ -78,29 +87,25 @@ export default function TypingArea({ song, currentIdx, mode, onVirtualChar, onRe
       className="w-full relative py-2 md:py-4 min-h-[140px] flex flex-col items-center"
       onClick={focusMobileInput}
     >
-      {mode === 'typing' && (
-        <>
-          <input
-            ref={mobileInputRef}
-            className="absolute w-px h-px opacity-0 pointer-events-none"
-            type="text"
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck={false}
-            inputMode="text"
-            onBeforeInput={handleMobileBeforeInput}
-            onInput={handleMobileInput}
-            aria-label="Typing input"
-          />
-          <div className="md:hidden mb-2 text-[11px] uppercase tracking-[2px] text-brand-sub/80">
-            tap text area to open keyboard
-          </div>
-        </>
-      )}
+      <input
+        ref={mobileInputRef}
+        className="absolute w-px h-px opacity-0 pointer-events-none"
+        type="text"
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
+        inputMode="text"
+        onBeforeInput={handleMobileBeforeInput}
+        onInput={handleMobileInput}
+        aria-label="Typing input"
+      />
+      <div className="md:hidden mb-2 text-[11px] uppercase tracking-[2px] text-brand-sub/80">
+        tap text area to open keyboard
+      </div>
 
       <div 
-        className="font-mono text-xl md:text-3xl leading-[1.45] tracking-[1px] select-none break-words max-w-8xl text-center transition-all duration-300 px-2" 
+        className="font-mono text-xl md:text-3xl leading-[1.45] tracking-[1px] select-none break-words w-full max-w-full md:max-w-6xl text-left md:text-center transition-all duration-300 px-2" 
         ref={displayRef}
       >
         {visibleLines.map((line, lineIndex) => (
